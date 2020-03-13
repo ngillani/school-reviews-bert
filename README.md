@@ -18,7 +18,7 @@ Looking in: runs/bert_reviews/Mar11_2020/
 ```
 
 ## Run a sweep
-PYTHONPATH=. python src/models/sweeps/bert_reviews_sweep.py --outcome mn_avg_eb --groupname testsweep
+PYTHONPATH=. python src/models/sweeps/bert_reviews_sweep.py --outcome mn_grd_eb --groupname mn_grd_eb
 
 ## Location of runs
 runs/bert_reviews/Mar08_20/testadvloss/lr0.01_hiddim64/

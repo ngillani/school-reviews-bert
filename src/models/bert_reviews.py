@@ -70,7 +70,7 @@ class BertReviewsModel(TrainNN):
             hp.batch_size)
 
         # Model 
-        config = BertConfig(output_attentions=True)
+        config = BertConfig(output_attentions=True, hidden_dropout_prob=hp.dropout, attention_probs_dropout_prob=hp.dropout)
         # TODO: set num_outputs depending on number of outcomes / adv_outcome?
         if hp.model_type == 'meanbert':
             self.model = MeanBertForSequenceRegression(config, hid_dim=hp.hid_dim, num_output=1)

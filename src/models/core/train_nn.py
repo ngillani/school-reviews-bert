@@ -102,6 +102,7 @@ class TrainNN(nn.Module):
                 step = epoch * data_loader.__len__() + i
 		curr_mean_losses = {k: np.mean(values) for k, values in losses.items()}
 		log_str = self.get_log_str(epoch, 'step {}'.format(i), 'train: {}'.format(is_train), curr_mean_losses)
+                print(log_str)
 		print(log_str, file=stdout_f)
                 for k, v in result.items():
                     if k.startswith('loss'):
@@ -147,7 +148,8 @@ class TrainNN(nn.Module):
             end_time = time.time()
             min_elapsed = (end_time - start_time) / 60
             log_str = self.get_log_str(epoch, 'After full training loop', 'train', mean_losses, runtime=min_elapsed)
-            print(log_str, file=stdout_f)
+            print(log_str)
+	    print(log_str, file=stdout_f)
             stdout_f.flush()
 
             for optimizer in self.optimizers:
@@ -160,7 +162,8 @@ class TrainNN(nn.Module):
             val_loss = mean_losses['loss']
             val_losses.append(val_loss)
             log_str = self.get_log_str(epoch, 'After full validation loop', 'valid', mean_losses)
-            print(log_str, file=stdout_f)
+            print(log_str)
+	    print(log_str, file=stdout_f)
             stdout_f.flush()
 
             # 

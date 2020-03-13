@@ -67,7 +67,7 @@ class TrainNN(nn.Module):
         """Called before one forward pass when training"""
         pass
 
-    def dataset_loop(self, data_loader, epoch, is_train=True, writer=None, tb_tag='train'):
+    def dataset_loop(self, data_loader, epoch, is_train=True, writer=None, tb_tag='train', stdout_f=None):
         """
         Can be used with either different splits of the dataset (train, valid, test)
         :return: dict
@@ -100,6 +100,9 @@ class TrainNN(nn.Module):
             # Logging
             if i % 10 == 0:
                 step = epoch * data_loader.__len__() + i
+		curr_mean_losses = {k: np.mean(values) for k, values in losses.items()}
+		log_str = self.get_log_str(epoch, 'step {}'.format(i), 'train: {}'.format(is_train), curr_mean_losses)
+		print(log_str, file=stdout_f)
                 for k, v in result.items():
                     if k.startswith('loss'):
                         writer.add_scalar('{}/{}'.format(tb_tag, k), v.item(), step)
@@ -107,11 +110,11 @@ class TrainNN(nn.Module):
         mean_losses = {k: np.mean(values) for k, values in losses.items()}
         return mean_losses
 
-    def get_log_str(self, epoch, dataset_split, mean_losses, runtime=None):
+    def get_log_str(self, epoch, context, dataset_split, mean_losses, runtime=None):
         """
         Create string to log to stdout
         """
-        log_str = 'Epoch {} -- {}:'.format(epoch, dataset_split)
+        log_str = 'Epoch {} {} -- {}:'.format(epoch, context, dataset_split)
         for k, v in mean_losses.items():
             log_str += ' {}={:.4f}'.format(k, v)
         if runtime is not None:
@@ -140,10 +143,10 @@ class TrainNN(nn.Module):
             start_time = time.time()
             for model in self.models:
                 model.train()
-            mean_losses = self.dataset_loop(self.tr_loader, epoch, is_train=True, writer=self.writer, tb_tag='train')
+            mean_losses = self.dataset_loop(self.tr_loader, epoch, is_train=True, writer=self.writer, tb_tag='train', stdout_f=stdout_f)
             end_time = time.time()
             min_elapsed = (end_time - start_time) / 60
-            log_str = self.get_log_str(epoch, 'train', mean_losses, runtime=min_elapsed)
+            log_str = self.get_log_str(epoch, 'After full training loop', 'train', mean_losses, runtime=min_elapsed)
             print(log_str, file=stdout_f)
             stdout_f.flush()
 
@@ -153,10 +156,10 @@ class TrainNN(nn.Module):
             # validate
             for model in self.models:
                 model.eval()
-            mean_losses = self.dataset_loop(self.val_loader, epoch, is_train=False, writer=self.writer, tb_tag='valid')
+            mean_losses = self.dataset_loop(self.val_loader, epoch, is_train=False, writer=self.writer, tb_tag='valid', stdout_f=stdout_f)
             val_loss = mean_losses['loss']
             val_losses.append(val_loss)
-            log_str = self.get_log_str(epoch, 'valid', mean_losses)
+            log_str = self.get_log_str(epoch, 'After full validation loop', 'valid', mean_losses)
             print(log_str, file=stdout_f)
             stdout_f.flush()
 
@@ -182,7 +185,7 @@ class TrainNN(nn.Module):
                 last_model_fp = cur_fp
 
             # Early stopping
-            if min_val_loss not in val_losses[-10:]:  # hasn't been an improvement in last 10 epochs
+            if min_val_loss not in val_losses[-5:]:  # hasn't been an improvement in last 5 epochs
                 break
 
         stdout_f.close()

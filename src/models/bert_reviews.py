@@ -107,7 +107,7 @@ class BertReviewsModel(TrainNN):
         if self.hp.model_type == 'meanbert':
     		predicted = self.model(input_ids, attention_mask=input_mask)  # [bsz] (n_outcomes)
         elif self.hp.model_type == 'robert':
-            predicted = model(input_ids, num_sentences_per_school, attention_mask=input_mask)  # [bsz] (n_outcomes)
+            predicted = self.model(input_ids, num_sentences_per_school, attention_mask=input_mask)  # [bsz] (n_outcomes)
 
         loss = self.compute_loss(predicted, test_scores)
     

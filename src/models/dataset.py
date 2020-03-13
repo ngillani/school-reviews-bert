@@ -30,17 +30,21 @@ def date_to_year(df, split_ind):
     return [d.split('-')[0] for d in df['date'][split_ind]]
 
 def load_and_cache_data(
-        # raw_data_file='data/all_gs_comments_by_school.csv',
-        # prepared_data_file='data/all_gs_comments_by_school_%s.p',
-       raw_data_file='data/tiny_by_school.csv',
-       prepared_data_file='data/tiny_by_school_%s.p',        
-        max_len=30,
-	    outcome='mn_avg_eb',
-        train_frac = 0.9
+       raw_data_file='data/Parent_gs_comments_by_school.csv',
+       prepared_data_file='data/Parent_gs_comments_by_school_%s_%s.p',
+       # raw_data_file='data/tiny_Parent_gs_comments_by_school.csv',
+       # prepared_data_file='data/tiny_Parent_gs_comments_by_school_%s_%s.p',        
+       max_len=30,
+       outcome='mn_avg_eb',
+       train_frac = 0.9
     ):
     
     print ('Starting load data fcn ...')
-    prepared_data_file = prepared_data_file % outcome
+    print('Loading data ...')
+    
+    df = pd.read_csv(raw_data_file).dropna(subset=[outcome, 'review_text']).reset_index()
+    var = np.nanvar(df[outcome])
+    prepared_data_file = prepared_data_file % (outcome, var)
     print (prepared_data_file)
     if os.path.isfile(prepared_data_file):
 #    if False:
@@ -48,10 +52,6 @@ def load_and_cache_data(
             input_ids, labels_test_score, attention_masks, sentences_per_school = pickle.load(f)
         print('data loaded from cache!')
     else:
-
-        print('Loading data ...')
-
-        df = pd.read_csv(raw_data_file).dropna(subset=[outcome, 'review_text']).reset_index()
 
         all_ind = list(range(0, len(df)))
         np.random.shuffle(all_ind)

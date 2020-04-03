@@ -8,7 +8,10 @@ PYTHONPATH=. python src/models/sweeps/bert_reviews_sweep.py --outcome mn_avg_eb 
 import argparse
 from src.models.core.experiments import run_param_sweep
 
-CMD = 'PYTHONPATH=. python src/models/bert_reviews.py'
+import platform
+print(platform.python_version())
+
+CMD = 'PYTHONPATH=. python2 src/models/bert_reviews.py'
 
 NGPUS_PER_RUN = 1
 

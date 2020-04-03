@@ -1,5 +1,8 @@
 runs/
 data
 .email_config.json*
+interp/venv/
+interp/img/
+interp/attributions/
 
 *.pyc

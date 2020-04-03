@@ -75,6 +75,9 @@ def run_param_sweep(base_cmd, grid, ngpus_per_run=1,
         check_queue_every_nmin (int)
         email_groupname (str)
     """
+
+    gpus_to_use = [2]
+
     if ngpus_per_run > 1:
         raise NotImplementedError('MultiGPU per run not handled yet')
 
@@ -101,7 +104,7 @@ def run_param_sweep(base_cmd, grid, ngpus_per_run=1,
     system_gpu_ids = [gpu.id for gpu in system_gpus]
     available_gpu_ids = get_available_GPUs(free_gpu_max_mem)
     # available_gpu_ids = [id for id in available_gpu_ids if id in range(7)]
-    available_gpu_ids = [id for id in available_gpu_ids if id in [0,1,2,3]]
+    available_gpu_ids = [id for id in available_gpu_ids if id in gpus_to_use]
     n_available = len(available_gpu_ids)
 
     # Run commands on available GPUs
@@ -129,7 +132,7 @@ def run_param_sweep(base_cmd, grid, ngpus_per_run=1,
         time.sleep(check_queue_every_nmin * 60)
         available_gpu_ids = get_available_GPUs(free_gpu_max_mem)
         # available_gpu_ids = [id for id in available_gpu_ids if id in range(7)]
-        available_gpu_ids = [id for id in available_gpu_ids if id in [0,1,2,3,4,5]]
+        available_gpu_ids = [id for id in available_gpu_ids if id in gpus_to_use]
         for i in range(len(available_gpu_ids)):  # run on available gpus
             if cur_combo_idx >= len(queued_combos):  # exit if all combos ran
                 break

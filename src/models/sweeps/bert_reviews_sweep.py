@@ -19,7 +19,7 @@ GRID = {
         0.0001,
     ],
     'dropout': [
-#        0.1,
+        0.1,
         0.3,
     ],
     'hid_dim': [
@@ -27,9 +27,9 @@ GRID = {
         768,
     ],
     'model_type': [
- #       'meanbert',
-#	'robert --n_layers 1',
-	'robert --n_layers 2'
+#        'meanbert',
+	'robert --n_layers 1',
+#	'robert --n_layers 2'
     ],
 }
 

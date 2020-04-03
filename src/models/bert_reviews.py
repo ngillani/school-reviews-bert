@@ -40,7 +40,7 @@ class HParams():
         self.lr_decay = 0.9999
         self.min_lr = 0.00001  #
         self.grad_clip = 1.0
-        self.max_epochs = 25
+        self.max_epochs = 12
 
         # Data
         self.max_len = 30

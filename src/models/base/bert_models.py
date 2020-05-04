@@ -5,6 +5,22 @@ from transformers import BertModel
 import pdb
 import numpy as np
 
+class GradientReverse(torch.autograd.Function):
+    scale = 1.0
+    @staticmethod
+    def forward(ctx, x):
+        return x.view_as(x)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return GradientReverse.scale * grad_output.neg()
+
+    
+def grad_reverse(x, scale=1.0):
+    GradientReverse.scale = scale
+    return GradientReverse.apply(x)
+
+
 class RobertForSequenceRegression(nn.Module):
 	def __init__(self, config, num_output=1, recurrent_hidden_size=1024, recurrent_num_layers=1):
 		super(RobertForSequenceRegression, self).__init__()
@@ -59,9 +75,14 @@ class MeanBertForSequenceRegression(nn.Module):
 				param.requires_grad=False
 			# param.requires_grad = False
 
+		self.num_output = num_output
 		self.fc1 = nn.Linear(config.hidden_size, hid_dim)
 		self.relu = torch.nn.ReLU()
-		self.output_layer = nn.Linear(hid_dim, num_output)
+		self.output_layer = nn.Linear(hid_dim, 1)
+		if num_output > 1:
+			self.output_layer_confounds = nn.Linear(hid_dim, num_output - 1)
+			self.fc_confounds = nn.Linear(config.hidden_size, hid_dim)
+			self.relu_confounds = torch.nn.ReLU()
 
 		self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
@@ -95,7 +116,14 @@ class MeanBertForSequenceRegression(nn.Module):
 		#return self.output_layer(F.relu(self.fc1(recurrent_output))) # [n_schools, num_output]
 		# return self.output_layer2(F.relu(self.output_layer1(sent_embs)))
 		
-		return self.output_layer(self.relu(self.fc1(sent_embs)))
+		confounds_pred = None
+		target_pred = self.output_layer(self.relu(self.fc1(sent_embs)))
+	
+		if self.num_output > 1:
+			sent_embs = grad_reverse(sent_embs)
+			confounds_pred = self.output_layer_confounds(self.relu_confounds(self.fc_confounds(sent_embs)))
+	
+		return target_pred, confounds_pred
 
 class BertEncoder(nn.Module):
 	def __init__(self, config, num_output=1):

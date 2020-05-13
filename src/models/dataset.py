@@ -32,8 +32,8 @@ def date_to_year(df, split_ind):
 def load_and_cache_data(
 	   raw_data_file='data/Parent_gs_comments_by_school_with_covars.csv',
 	   prepared_data_file='data/Parent_gs_comments_by_school_with_covars_%s_%s.p',
-	   # raw_data_file='data/tiny_Parent_gs_comments_by_school_with_covars.csv',
-	   # prepared_data_file='data/tiny_Parent_gs_comments_by_school_with_covars_%s_%s.p',		 
+	#    raw_data_file='data/tiny_Parent_gs_comments_by_school_with_covars.csv',
+	#    prepared_data_file='data/tiny_Parent_gs_comments_by_school_with_covars_%s_%s.p',		 
 	   max_len=30,
 	   outcome='mn_avg_eb',
 	   train_frac = 0.9
@@ -59,7 +59,7 @@ def load_and_cache_data(
 		train_ind = all_ind[0:int(train_frac*len(all_ind))]
 		val_ind = all_ind[int(train_frac*len(all_ind)):]
 
-		url = {'train': list(df['url'][train_ind]), 'validation': list(df['url'][val_ind])}
+		url = {'train': train_ind, 'validation': val_ind}
 		data = {'train': list(df['review_text'][train_ind]), 'validation': list(df['review_text'][val_ind])}
 		labels_target = {'train': list(df[outcome][train_ind]), 'validation': list(df[outcome][val_ind])}		 
 		perwht = {'train': list(df['perwht'][train_ind]), 'validation': list(df['perwht'][val_ind])}
@@ -121,9 +121,12 @@ def load_and_cache_data(
 			pickle.dump((input_ids, labels_target, attention_masks, sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate), f)
 			print('Data written to disk')
 
-	# tensorize everything except for url, since that's a string
-	for dataset in [input_ids, labels_target, attention_masks, sentences_per_school, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate]:
+	# tensorize everything
+	for dataset in [input_ids, labels_target, attention_masks, sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate]:
 		for d in dataset:
 			dataset[d] = torch.tensor(dataset[d])
 
 	return input_ids, labels_target, attention_masks, sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate
+
+if __name__ == "__main__":
+	load_and_cache_data(outcome='top_level')

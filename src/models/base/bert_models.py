@@ -31,16 +31,18 @@ class RobertForSequenceRegression(nn.Module):
 				param.requires_grad=False
 			# param.requires_grad = False
 
+		self.num_output = num_output
+
+		self.gru = torch.nn.GRU(config.hidden_size, recurrent_hidden_size, recurrent_num_layers, batch_first=True)
+
 		self.relu = nn.ReLU()
 		self.dropout = nn.Dropout(config.hidden_dropout_prob)
 		self.fc1 = nn.Linear(recurrent_hidden_size, recurrent_hidden_size)
 		self.output_layer = nn.Linear(recurrent_hidden_size, 1)
 
 		if num_output > 1:
-			self.output_layer_confounds = nn.Linear(hid_dim, num_output - 1)
-			self.fc_confounds = nn.Linear(config.hidden_size, hid_dim)
-
-		self.gru = torch.nn.GRU(config.hidden_size, recurrent_hidden_size, recurrent_num_layers, batch_first=True)
+			self.fc_confounds = nn.Linear(recurrent_hidden_size, recurrent_hidden_size)
+			self.output_layer_confounds = nn.Linear(recurrent_hidden_size, num_output - 1)
 
 		model_parameters = filter(lambda p: p.requires_grad, self.parameters())
 		print ("Number of model params", sum([np.prod(p.size()) for p in model_parameters]))

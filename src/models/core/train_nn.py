@@ -188,7 +188,7 @@ class TrainNN(nn.Module):
 				last_model_fp = cur_fp
 
 			# Early stopping
-			if min_val_loss not in val_losses[-3:]:  # hasn't been an improvement in last 5 epochs
+			if min_val_loss not in val_losses[-3:]:  # hasn't been an improvement in last 3 epochs
 				break
 
 		stdout_f.close()

@@ -40,7 +40,7 @@ class HParams():
         self.lr_decay = 0.9999
         self.min_lr = 0.00001  #
         self.grad_clip = 1.0
-        self.max_epochs = 25
+        self.max_epochs = 12
 
         # Data
         self.max_len = 30
@@ -50,7 +50,7 @@ class HParams():
         self.hid_dim = 256  # 256, 768
         self.n_layers = 1
         self.outcome = 'mn_avg_eb'  # mn_avg_eb, mn_grd_eb, top_level
-	    self.adv_terms = {}
+        self.adv_terms = '' # any combination of the following: perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate
         self.model_type = 'meanbert'  # 'robert' 'meanbert
 
 
@@ -62,17 +62,19 @@ class BertReviewsModel(TrainNN):
             outcome=hp.outcome, max_len=hp.max_len
         )
 
-        num_output = 1
-        for k in hp.adv_terms:
-            hp.adv_terms[k] = eval(k)['train']
-            num_output += 1
+        # Weird hack to deal with argparse issues ... set adv_terms to be a string by default
+        # then turn into an array
+        if len(hp.adv_terms) == 0:
+            hp.adv_terms = []
+
+        num_output = 1 + len(hp.adv_terms)
 
         self.tr_loader = make_dataloader(
-            (input_ids['train'], labels_target['train'], attention_masks['train'], num_sentences_per_school['train'], url['train'], perwht['train'], perfrl['train'], share_singleparent['train'], totenrl['train'], share_collegeplus['train'], mail_returnrate['train']),
+            (input_ids['train'], labels_target['train'], attention_masks['train'], sentences_per_school['train'], url['train'], perwht['train'], perfrl['train'], share_singleparent['train'], totenrl['train'], share_collegeplus['train'], mail_returnrate['train']),
             hp.batch_size)
 
         self.val_loader  = make_dataloader(
-            (input_ids['validation'], labels_target['validation'], attention_masks['validation'], num_sentences_per_school['validation'], url['validation'], perwht['validation'], perfrl['validation'], share_singleparent['validation'], totenrl['validation'], share_collegeplus['validation'], mail_returnrate['validation']),
+            (input_ids['validation'], labels_target['validation'], attention_masks['validation'], sentences_per_school['validation'], url['validation'], perwht['validation'], perfrl['validation'], share_singleparent['validation'], totenrl['validation'], share_collegeplus['validation'], mail_returnrate['validation']),
             hp.batch_size)
 
         # Model 
@@ -99,16 +101,16 @@ class BertReviewsModel(TrainNN):
 
 
     def compute_loss_adv_for_grad_reversal(self, predicted_t, actual_t, predicted_adv, actual_adv):
-	    t_loss = F.mse_loss(predicted_t, actual_t)
+        # print ('sizes target: ', predicted_t.size(), actual_t.size())
+        t_loss = F.mse_loss(predicted_t, actual_t)
         all_losses = {'loss_target': t_loss}
-
         total_loss = t_loss.clone()
 
         # Sort keys in alphabetical order
-        sorted_adv_terms = sorted(list(self.hp.adv_terms.keys()))
-        for i in range(0, len(sorted_adv_terms)):
-            all_losses['loss_' + sorted_adv_terms[i]] = F.mse_loss(predicted_adv[i], actual_adv[i])
-            total_loss += all_losses['loss_' + sorted_adv_terms[i]]
+        for i in range(0, len(self.hp.adv_terms)):
+            # print ('sizes confounds: ', predicted_adv[i].size(), actual_adv[i].size())
+            all_losses['loss_' + self.hp.adv_terms[i]] = F.mse_loss(predicted_adv[i], actual_adv[i])
+            total_loss += all_losses['loss_' + self.hp.adv_terms[i]]
 
         all_losses['loss'] = total_loss
         return all_losses
@@ -160,14 +162,14 @@ class BertReviewsModel(TrainNN):
         Returns: dict: 'loss': float Tensor must exist
         """
         
-        input_ids, target, input_mask, sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate = batch
+        input_ids, target, input_mask, num_sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate = batch
         num_sentences_per_school, perm = torch.sort(num_sentences_per_school, descending=True)
         num_sentences_per_school =  nn_utils.move_to_cuda(num_sentences_per_school)
         input_ids =  nn_utils.move_to_cuda(input_ids[perm, :, :])
         input_mask =  nn_utils.move_to_cuda(input_mask[perm, :, :])
         target =  nn_utils.move_to_cuda(target[perm].unsqueeze_(1))
-	    perfrl = nn_utils.move_to_cuda(perfrl[perm].unsqueeze_(1))
-	    perwht = nn_utils.move_to_cuda(perwht[perm].unsqueeze_(1))
+        perfrl = nn_utils.move_to_cuda(perfrl[perm].unsqueeze_(1))
+        perwht = nn_utils.move_to_cuda(perwht[perm].unsqueeze_(1))
         share_singleparent = nn_utils.move_to_cuda(share_singleparent[perm].unsqueeze_(1))
         totenrl = nn_utils.move_to_cuda(totenrl[perm].unsqueeze_(1))
         share_collegeplus = nn_utils.move_to_cuda(share_collegeplus[perm].unsqueeze_(1))
@@ -179,7 +181,7 @@ class BertReviewsModel(TrainNN):
             predicted_target, predicted_confounds = self.model(input_ids, num_sentences_per_school, attention_mask=input_mask)  # [bsz] (n_outcomes)
 
         if len(self.hp.adv_terms) > 0:
-            actual_adv = [eval(k) for k in self.hp.adv_terms]
+            actual_adv = [eval(t) for t in self.hp.adv_terms]
             predicted_adv = []
             for i in range(0, predicted_confounds.size(1)):
                 predicted_adv.append(predicted_confounds[:,i].unsqueeze_(1))

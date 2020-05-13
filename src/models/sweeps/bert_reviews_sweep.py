@@ -18,22 +18,28 @@ NGPUS_PER_RUN = 1
 GRID = {
      # Training
     'lr': [
-        0.0005,
+        # 0.0005,
         0.0001,
     ],
     'dropout': [
-        0.1,
+        # 0.1,
         0.3,
     ],
     'hid_dim': [
         256,
-        768,
+        # 768,
     ],
     'model_type': [
-#        'meanbert',
-	'robert --n_layers 1',
+       'meanbert',
+	# 'robert --n_layers 1',
 #	'robert --n_layers 2'
     ],
+    'adv_terms': [
+        'perfrl,perwht',
+        'share_collegeplus',
+        'share_singleparent',
+        'totenrl'
+    ]
 }
 
 if __name__ == "__main__":

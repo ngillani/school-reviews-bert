@@ -103,8 +103,8 @@ def run_param_sweep(base_cmd, grid, ngpus_per_run=1,
     system_gpus = GPUtil.getGPUs()
     system_gpu_ids = [gpu.id for gpu in system_gpus]
     available_gpu_ids = get_available_GPUs(free_gpu_max_mem)
-    # available_gpu_ids = [id for id in available_gpu_ids if id in range(7)]
-    available_gpu_ids = [id for id in available_gpu_ids if id in gpus_to_use]
+    available_gpu_ids = [id for id in available_gpu_ids if id in range(7)]
+    # available_gpu_ids = [id for id in available_gpu_ids if id in gpus_to_use]
     n_available = len(available_gpu_ids)
 
     # Run commands on available GPUs
@@ -254,14 +254,12 @@ def create_argparse_and_update_hp(hp):
         if value is not None:
             if param == 'adv_terms':
                 value = value.split(',')
-                adv_terms = dict([(k, []) for k in value])
-                value = adv_terms
             setattr(hp, param, value)
             if param == "notes":
                 run_name = [value] + run_name
             else:
                 if param == 'adv_terms':
-                    run_name.append('{}_{}'.format(param, '_'.join(value.keys())))
+                    run_name.append('{}_{}'.format(param, '_'.join(value)))
                 else:
                     run_name.append('{}_{}'.format(param, value))
     run_name = "-".join(run_name)

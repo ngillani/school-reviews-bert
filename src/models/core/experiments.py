@@ -252,11 +252,18 @@ def create_argparse_and_update_hp(hp):
     run_name = []
     for param, value in sorted(vars(opt).items()):
         if value is not None:
+            if param == 'adv_terms':
+                value = value.split(',')
+                adv_terms = dict([(k, []) for k in value])
+                value = adv_terms
             setattr(hp, param, value)
             if param == "notes":
                 run_name = [value] + run_name
             else:
-                run_name.append('{}_{}'.format(param, value))
+                if param == 'adv_terms':
+                    run_name.append('{}_{}'.format(param, '_'.join(value.keys())))
+                else:
+                    run_name.append('{}_{}'.format(param, value))
     run_name = "-".join(run_name)
     run_name = ("default_" + str(uuid.uuid4())[:8]) if (run_name == "") else run_name
 

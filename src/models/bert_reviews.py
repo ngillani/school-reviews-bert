@@ -13,7 +13,6 @@ from torch import optim
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
-
 from transformers import BertModel, BertConfig#, BertAdam
 # from pytorch_pretrained_bert import BertAdam
 
@@ -51,8 +50,7 @@ class HParams():
         self.hid_dim = 256  # 256, 768
         self.n_layers = 1
         self.outcome = 'mn_avg_eb'  # mn_avg_eb, mn_grd_eb, top_level
-        self.compute_adv = True
-	self.adv_terms = {}
+	    self.adv_terms = {}
         self.model_type = 'meanbert'  # 'robert' 'meanbert
 
 
@@ -60,29 +58,28 @@ class BertReviewsModel(TrainNN):
     def __init__(self, hp, save_dir=None):
         super(BertReviewsModel, self).__init__(hp, save_dir)
 
-        input_ids, labels_test_score, perfrl, perwht, attention_masks, num_sentences_per_school = load_and_cache_data(
-            outcome=hp.outcome, max_len=hp.max_len)
+        input_ids, labels_target, attention_masks, sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate = load_and_cache_data(
+            outcome=hp.outcome, max_len=hp.max_len
+        )
 
-	num_output = 3
-	if hp.compute_adv:
-	    hp.adv_terms['perfrl'] = perfrl['train']
-	    hp.adv_terms['perwht'] = perwht['train']
-	    num_output = 3
+        num_output = 1
+        for k in hp.adv_terms:
+            hp.adv_terms[k] = eval(k)['train']
+            num_output += 1
 
         self.tr_loader = make_dataloader(
-            (input_ids['train'], attention_masks['train'], labels_test_score['train'], perfrl['train'], perwht['train'], num_sentences_per_school['train']),
+            (input_ids['train'], labels_target['train'], attention_masks['train'], num_sentences_per_school['train'], url['train'], perwht['train'], perfrl['train'], share_singleparent['train'], totenrl['train'], share_collegeplus['train'], mail_returnrate['train']),
             hp.batch_size)
 
         self.val_loader  = make_dataloader(
-            (input_ids['validation'],
-             attention_masks['validation'], labels_test_score['validation'], perfrl['validation'], perwht['validation'], num_sentences_per_school['validation']),
+            (input_ids['validation'], labels_target['validation'], attention_masks['validation'], num_sentences_per_school['validation'], url['validation'], perwht['validation'], perfrl['validation'], share_singleparent['validation'], totenrl['validation'], share_collegeplus['validation'], mail_returnrate['validation']),
             hp.batch_size)
 
         # Model 
         config = BertConfig(output_attentions=True, hidden_dropout_prob=hp.dropout, attention_probs_dropout_prob=hp.dropout)
-        # TODO: set num_outputs depending on number of outcomes / adv_outcome?
         if hp.model_type == 'meanbert':
             self.model = MeanBertForSequenceRegression(config, hid_dim=hp.hid_dim, num_output=num_output)
+        
         elif hp.model_type == 'robert':
             self.model = RobertForSequenceRegression(config, num_output=num_output,
                 recurrent_hidden_size=hp.hid_dim, recurrent_num_layers=hp.n_layers)
@@ -95,13 +92,14 @@ class BertReviewsModel(TrainNN):
         # TODO: use BertADAM?
         self.optimizers.append(optim.Adam(self.parameters(), hp.lr))
 
+
     def compute_loss(self, predicted_t, actual_t):
         t_loss = F.mse_loss(predicted_t, actual_t)
         return t_loss
 
 
     def compute_loss_adv_for_grad_reversal(self, predicted_t, actual_t, predicted_adv, actual_adv):
-	t_loss = F.mse_loss(predicted_t, actual_t)
+	    t_loss = F.mse_loss(predicted_t, actual_t)
         all_losses = {'loss_target': t_loss}
 
         total_loss = t_loss.clone()
@@ -116,43 +114,43 @@ class BertReviewsModel(TrainNN):
         return all_losses
 
 
-    def compute_loss_adv(self, predicted_t, actual_t, predicted_adv, actual_adv):
-	t_loss = F.mse_loss(predicted_t, actual_t)
-	all_losses = {'loss_target': t_loss}
+    # def compute_loss_adv(self, predicted_t, actual_t, predicted_adv, actual_adv):
+    #     t_loss = F.mse_loss(predicted_t, actual_t)
+    #     all_losses = {'loss_target': t_loss}
 
-	total_loss = t_loss.clone()
+    #     total_loss = t_loss.clone()
 
-	# Sort keys in alphabetical order
-        sorted_adv_terms = sorted(list(self.hp.adv_terms.keys()))       
-        for i in range(0, len(sorted_adv_terms)):
-            all_losses['loss_' + sorted_adv_terms[i]] = F.mse_loss(predicted_adv[i], actual_adv[i])
-	    total_loss -= all_losses['loss_' + sorted_adv_terms[i]]
+    #     # Sort keys in alphabetical order
+    #         sorted_adv_terms = sorted(list(self.hp.adv_terms.keys()))       
+    #         for i in range(0, len(sorted_adv_terms)):
+    #             all_losses['loss_' + sorted_adv_terms[i]] = F.mse_loss(predicted_adv[i], actual_adv[i])
+    #         total_loss -= all_losses['loss_' + sorted_adv_terms[i]]
 
-	all_losses['loss'] = total_loss
-	return all_losses
+    #     all_losses['loss'] = total_loss
+    #     return all_losses
 
 
-    def compute_loss_adv_rand(self, predicted_t, actual_t, predicted_adv):
+    # def compute_loss_adv_rand(self, predicted_t, actual_t, predicted_adv):
 	
-	t_loss = F.mse_loss(predicted_t, actual_t)
-	all_losses = {'loss_target': t_loss}
+    #     t_loss = F.mse_loss(predicted_t, actual_t)
+    #     all_losses = {'loss_target': t_loss}
 
-	# Sort keys in alphabetical order
-	sorted_adv_terms = sorted(list(self.hp.adv_terms.keys()))	
-	for i in range(0, len(sorted_adv_terms)):
-            curr_covar = sorted_adv_terms[i]
-	    n_sample = np.max(predicted_adv[i].size())
-            idx = torch.randperm(len(self.hp.adv_terms[curr_covar]))[:n_sample]
-	    sampled_vals = torch.tensor(self.hp.adv_terms[curr_covar][idx]).unsqueeze_(1)
-	    sampled_vals = nn_utils.move_to_cuda(sampled_vals)
-	    all_losses['loss_' + sorted_adv_terms[i]] = F.mse_loss(predicted_adv[i], sampled_vals)
-	    
-	    # print ('{} --- loss: {}, var: {}, sampled vals: {}'.format(curr_covar, all_losses['loss_' + curr_covar],  self.hp.adv_terms[curr_covar].var(0), sampled_vals)) 
+    #     # Sort keys in alphabetical order
+    #     sorted_adv_terms = sorted(list(self.hp.adv_terms.keys()))	
+    #     for i in range(0, len(sorted_adv_terms)):
+    #             curr_covar = sorted_adv_terms[i]
+    #         n_sample = np.max(predicted_adv[i].size())
+    #             idx = torch.randperm(len(self.hp.adv_terms[curr_covar]))[:n_sample]
+    #         sampled_vals = torch.tensor(self.hp.adv_terms[curr_covar][idx]).unsqueeze_(1)
+    #         sampled_vals = nn_utils.move_to_cuda(sampled_vals)
+    #         all_losses['loss_' + sorted_adv_terms[i]] = F.mse_loss(predicted_adv[i], sampled_vals)
+            
+    #         # print ('{} --- loss: {}, var: {}, sampled vals: {}'.format(curr_covar, all_losses['loss_' + curr_covar],  self.hp.adv_terms[curr_covar].var(0), sampled_vals)) 
 
-	total_loss = torch.sum(torch.tensor([all_losses[k] for k in all_losses]))
-	all_losses['loss'] = total_loss
-	all_losses['loss'].requires_grad = True
-	return all_losses
+    #     total_loss = torch.sum(torch.tensor([all_losses[k] for k in all_losses]))
+    #     all_losses['loss'] = total_loss
+    #     all_losses['loss'].requires_grad = True
+    #     return all_losses
 	
 
     def one_forward_pass(self, batch):
@@ -162,31 +160,34 @@ class BertReviewsModel(TrainNN):
         Returns: dict: 'loss': float Tensor must exist
         """
         
-        input_ids, input_mask, test_scores, perfrl, perwht, num_sentences_per_school = batch
+        input_ids, target, input_mask, sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate = batch
         num_sentences_per_school, perm = torch.sort(num_sentences_per_school, descending=True)
+        num_sentences_per_school =  nn_utils.move_to_cuda(num_sentences_per_school)
         input_ids =  nn_utils.move_to_cuda(input_ids[perm, :, :])
         input_mask =  nn_utils.move_to_cuda(input_mask[perm, :, :])
-        test_scores =  nn_utils.move_to_cuda(test_scores[perm].unsqueeze_(1))
-	perfrl = nn_utils.move_to_cuda(perfrl[perm].unsqueeze_(1))
-	perwht = nn_utils.move_to_cuda(perwht[perm].unsqueeze_(1))
-        num_sentences_per_school =  nn_utils.move_to_cuda(num_sentences_per_school)
+        target =  nn_utils.move_to_cuda(target[perm].unsqueeze_(1))
+	    perfrl = nn_utils.move_to_cuda(perfrl[perm].unsqueeze_(1))
+	    perwht = nn_utils.move_to_cuda(perwht[perm].unsqueeze_(1))
+        share_singleparent = nn_utils.move_to_cuda(share_singleparent[perm].unsqueeze_(1))
+        totenrl = nn_utils.move_to_cuda(totenrl[perm].unsqueeze_(1))
+        share_collegeplus = nn_utils.move_to_cuda(share_collegeplus[perm].unsqueeze_(1))
+        mail_returnrate = nn_utils.move_to_cuda(mail_returnrate[perm].unsqueeze_(1))
                 
         if self.hp.model_type == 'meanbert':
     	    predicted_target, predicted_confounds = self.model(input_ids, attention_mask=input_mask)  # [bsz] (n_outcomes)
         elif self.hp.model_type == 'robert':
-            predicted_target = self.model(input_ids, num_sentences_per_school, attention_mask=input_mask)  # [bsz] (n_outcomes)
+            predicted_target, predicted_confounds = self.model(input_ids, num_sentences_per_school, attention_mask=input_mask)  # [bsz] (n_outcomes)
 
-	if self.hp.compute_adv:
-	    actual_adv = [perfrl, perwht]
-	    predicted_adv = []
-	    for i in range(0, predicted_confounds.size(1)):
-		predicted_adv.append(predicted_confounds[:,i].unsqueeze_(1))
-	    # losses = self.compute_loss_adv_rand(predicted_target, test_scores, predicted_adv)
-	    losses = self.compute_loss_adv_for_grad_reversal(predicted_target, test_scores, predicted_adv, actual_adv)
-	
-	else:
-            losses = {'loss': self.compute_loss(predicted_target, test_scores)}
-    
+        if len(self.hp.adv_terms) > 0:
+            actual_adv = [eval(k) for k in self.hp.adv_terms]
+            predicted_adv = []
+            for i in range(0, predicted_confounds.size(1)):
+                predicted_adv.append(predicted_confounds[:,i].unsqueeze_(1))
+            losses = self.compute_loss_adv_for_grad_reversal(predicted_target, target, predicted_adv, actual_adv)
+
+        else:
+            losses = {'loss': self.compute_loss(predicted_target, target)}
+
         return losses
 
 

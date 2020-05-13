@@ -31,9 +31,15 @@ class RobertForSequenceRegression(nn.Module):
 				param.requires_grad=False
 			# param.requires_grad = False
 
+		self.relu = nn.ReLU()
 		self.dropout = nn.Dropout(config.hidden_dropout_prob)
 		self.fc1 = nn.Linear(recurrent_hidden_size, recurrent_hidden_size)
-		self.output_layer = nn.Linear(recurrent_hidden_size, num_output)
+		self.output_layer = nn.Linear(recurrent_hidden_size, 1)
+
+		if num_output > 1:
+			self.output_layer_confounds = nn.Linear(hid_dim, num_output - 1)
+			self.fc_confounds = nn.Linear(config.hidden_size, hid_dim)
+
 		self.gru = torch.nn.GRU(config.hidden_size, recurrent_hidden_size, recurrent_num_layers, batch_first=True)
 
 		model_parameters = filter(lambda p: p.requires_grad, self.parameters())
@@ -60,9 +66,14 @@ class RobertForSequenceRegression(nn.Module):
 																   batch_first=True)
 		recurrent_output = self.gru(packed_sent_embs)[1].squeeze(0) # [n_schools, recurrent_hidden_size]
 		
-		# pdb.set_trace()
-		# hidden_states = torch.nn.utils.rnn.pad_packed_sequence(recurrent_output, batch_first=True) # [n_schools, n_sent, recurrent_hidden_size]
-		return self.output_layer(F.relu(self.fc1(recurrent_output))) # [n_schools, num_output]
+		confounds_pred = None
+		target_pred = self.output_layer(self.relu(self.fc1(recurrent_output)))
+	
+		if self.num_output > 1:
+			recurrent_output = grad_reverse(recurrent_output)
+			confounds_pred = self.output_layer_confounds(self.relu(self.fc_confounds(recurrent_output)))
+	
+		return target_pred, confounds_pred
 
 
 class MeanBertForSequenceRegression(nn.Module):
@@ -75,20 +86,16 @@ class MeanBertForSequenceRegression(nn.Module):
 				param.requires_grad=False
 			# param.requires_grad = False
 
-		self.num_output = num_output
-		self.fc1 = nn.Linear(config.hidden_size, hid_dim)
-		self.relu = torch.nn.ReLU()
-		self.output_layer = nn.Linear(hid_dim, 1)
-		if num_output > 1:
-			self.output_layer_confounds = nn.Linear(hid_dim, num_output - 1)
-			self.fc_confounds = nn.Linear(config.hidden_size, hid_dim)
-			self.relu_confounds = torch.nn.ReLU()
-
 		self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-		# self.fc1 = nn.Linear(recurrent_hidden_size, recurrent_hidden_size)
-		# self.output_layer = nn.Linear(recurrent_hidden_size, num_output)
-		# self.gru = torch.nn.GRU(config.hidden_size, recurrent_hidden_size, recurrent_num_layers, batch_first=True)
+		self.num_output = num_output
+		self.relu = nn.ReLU()
+		self.fc1 = nn.Linear(config.hidden_size, hid_dim)
+		self.output_layer = nn.Linear(hid_dim, 1)
+
+		if num_output > 1:
+			self.fc_confounds = nn.Linear(config.hidden_size, hid_dim)
+			self.output_layer_confounds = nn.Linear(hid_dim, num_output - 1)
 
 		# model_parameters = filter(lambda p: p.requires_grad, self.parameters())
 		# print ("Number of model params", sum([np.prod(p.size()) for p in model_parameters]))
@@ -110,20 +117,16 @@ class MeanBertForSequenceRegression(nn.Module):
 		sent_embs = self.dropout(outputs[0].mean(dim=1)) # [n_schools * n_sent, config.hidden_size]
 		sent_embs = sent_embs.view(n_schools, n_sent, sent_embs.size(-1))
 		sent_embs = sent_embs.mean(dim=1) # [n_schools, config.hidden_size]
-
-		# pdb.set_trace()
-		# hidden_states = torch.nn.utils.rnn.pad_packed_sequence(recurrent_output, batch_first=True) # [n_schools, n_sent, recurrent_hidden_size]
-		#return self.output_layer(F.relu(self.fc1(recurrent_output))) # [n_schools, num_output]
-		# return self.output_layer2(F.relu(self.output_layer1(sent_embs)))
 		
 		confounds_pred = None
 		target_pred = self.output_layer(self.relu(self.fc1(sent_embs)))
 	
 		if self.num_output > 1:
 			sent_embs = grad_reverse(sent_embs)
-			confounds_pred = self.output_layer_confounds(self.relu_confounds(self.fc_confounds(sent_embs)))
+			confounds_pred = self.output_layer_confounds(self.relu(self.fc_confounds(sent_embs)))
 	
 		return target_pred, confounds_pred
+
 
 class BertEncoder(nn.Module):
 	def __init__(self, config, num_output=1):

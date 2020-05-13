@@ -42,14 +42,14 @@ def load_and_cache_data(
 	print ('Starting load data fcn ...')
 	print('Loading data ...')
 	
-	df = pd.read_csv(raw_data_file).dropna(subset=[outcome, 'review_text', 'perfrl', 'perwht']).reset_index()
+	df = pd.read_csv(raw_data_file).dropna(subset=['url', outcome, 'review_text', 'perfrl', 'perwht', 'singleparent_share2010', 'totenrl', 'frac_coll_plus2010', 'mail_return_rate2010']).reset_index()
 	var = np.nanvar(df[outcome])
 	prepared_data_file = prepared_data_file % (outcome, var)
 	print (prepared_data_file)
 	if os.path.isfile(prepared_data_file):
 #	 if False:
 		with open(prepared_data_file, 'rb') as f:
-			input_ids, labels_test_score, perfrl, perwht, attention_masks, sentences_per_school = pickle.load(f)
+			input_ids, labels_target, attention_masks, sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate = pickle.load(f)
 		print('data loaded from cache!')
 	else:
 
@@ -59,11 +59,15 @@ def load_and_cache_data(
 		train_ind = all_ind[0:int(train_frac*len(all_ind))]
 		val_ind = all_ind[int(train_frac*len(all_ind)):]
 
+		url = {'train': list(df['url'][train_ind]), 'validation': list(df['url'][val_ind])}
 		data = {'train': list(df['review_text'][train_ind]), 'validation': list(df['review_text'][val_ind])}
-		labels_progress = {'train': list(df['mn_grd_eb'][train_ind]), 'validation': list(df['mn_grd_eb'][val_ind])}
-		labels_test_score = {'train': list(df[outcome][train_ind]), 'validation': list(df[outcome][val_ind])}		 
+		labels_target = {'train': list(df[outcome][train_ind]), 'validation': list(df[outcome][val_ind])}		 
 		perwht = {'train': list(df['perwht'][train_ind]), 'validation': list(df['perwht'][val_ind])}
 		perfrl = {'train': list(df['perfrl'][train_ind]), 'validation': list(df['perfrl'][val_ind])}
+		share_singleparent = {'train': list(df['singleparent_share2010'][train_ind]), 'validation': list(df['singleparent_share2010'][val_ind])}
+		totenrl = {'train': list(df['totenrl'][train_ind]), 'validation': list(df['totenrl'][val_ind])}
+		share_collegeplus = {'train': list(df['frac_coll_plus2010'][train_ind]), 'validation': list(df['frac_coll_plus2010'][val_ind])}
+		mail_returnrate = {'train': list(df['mail_return_rate2010'][train_ind]), 'validation': list(df['mail_return_rate2010'][val_ind])}
 
 		# pd.options.display.max_colwidth = 200
 		# print (df['url'][train_ind], df['mn_avg_eb'][train_ind], df['review_text'][train_ind])
@@ -114,13 +118,12 @@ def load_and_cache_data(
 					pdb.set_trace()
 
 		with open(prepared_data_file, 'wb') as f:
-			pickle.dump((input_ids, labels_test_score, perfrl, perwht, attention_masks, sentences_per_school), f)
+			pickle.dump((input_ids, labels_target, attention_masks, sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate), f)
 			print('Data written to disk')
 
-	# tensorize
-	for dataset in [labels_test_score, perfrl, perwht, input_ids, attention_masks, sentences_per_school]:
+	# tensorize everything except for url, since that's a string
+	for dataset in [input_ids, labels_target, attention_masks, sentences_per_school, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate]:
 		for d in dataset:
 			dataset[d] = torch.tensor(dataset[d])
 
-# 800 * 50 * 30
-	return input_ids, labels_test_score, perfrl, perwht, attention_masks, sentences_per_school
+	return input_ids, labels_target, attention_masks, sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate

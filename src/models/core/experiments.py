@@ -76,7 +76,7 @@ def run_param_sweep(base_cmd, grid, ngpus_per_run=1,
         email_groupname (str)
     """
 
-    gpus_to_use = [0, 1, 2, 3, 4, 5, 6, 7]
+    gpus_to_use = [2]
 
     if ngpus_per_run > 1:
         raise NotImplementedError('MultiGPU per run not handled yet')

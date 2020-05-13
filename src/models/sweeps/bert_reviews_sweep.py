@@ -31,8 +31,8 @@ GRID = {
     ],
     'model_type': [
 #        'meanbert',
-#	'robert --n_layers 1',
-	'robert --n_layers 2'
+	'robert --n_layers 1',
+#	'robert --n_layers 2'
     ],
 }
 

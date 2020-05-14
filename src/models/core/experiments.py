@@ -103,7 +103,7 @@ def run_param_sweep(base_cmd, grid, ngpus_per_run=1,
     system_gpus = GPUtil.getGPUs()
     system_gpu_ids = [gpu.id for gpu in system_gpus]
     available_gpu_ids = get_available_GPUs(free_gpu_max_mem)
-    available_gpu_ids = [id for id in available_gpu_ids if id in range(7)]
+    available_gpu_ids = [id for id in available_gpu_ids if id in range(8)]
     # available_gpu_ids = [id for id in available_gpu_ids if id in gpus_to_use]
     n_available = len(available_gpu_ids)
 

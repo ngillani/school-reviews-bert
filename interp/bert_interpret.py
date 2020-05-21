@@ -18,17 +18,18 @@ import sys
 
 # from utils.header import *
 
-BASE_DIR = '/mnt/jessica/ngillani/school_ratings_2.0/'
+BASE_DIR = '/home/ubuntu/school_reviews/school_reviews_bert/'
 PREPARED_DATA_FILE_mn_avg_eb = '{}data/Parent_gs_comments_by_school_mn_avg_eb_1.7682657723517046.p'.format(BASE_DIR)
 PREPARED_DATA_FILE_mn_grd_eb = '{}data/Parent_gs_comments_by_school_mn_grd_eb_0.034058608806675876.p'.format(BASE_DIR)
 PREPARED_DATA_FILE_top_level = '{}data/Parent_gs_comments_by_school_top_level_1.3187244708547647.p'.format(BASE_DIR)
-PREPARED_DATA_FILE_mn_avg_eb_adv = '{}data/Parent_gs_comments_by_school_with_covars_mn_avg_eb_1.7672375209964608.p'.format(BASE_DIR)
-#PREPARED_DATA_FILE_mn_avg_eb_adv = '{}data/tiny_Parent_gs_comments_by_school_with_covars_mn_avg_eb_1.791568987559323.p'.format(BASE_DIR)
+PREPARED_DATA_FILE_mn_avg_eb_adv = '{}data/Parent_gs_comments_by_school_with_covars_mn_avg_eb_1.753468860986852.p'.format(BASE_DIR)
+PREPARED_DATA_FILE_top_level_adv = '{}data/Parent_gs_comments_by_school_with_covars_top_level_1.304894531887436.p'.format(BASE_DIR)
+# PREPARED_DATA_FILE_mn_avg_eb_adv = '{}data/tiny_Parent_gs_comments_by_school_with_covars_mn_avg_eb_1.8568614088656685.p'.format(BASE_DIR)
 #PREPARED_DATA_FILE_top_level = '{}data/tiny_by_school_top_level.p'.format(BASE_DIR)
 
 sys.path.append("{}src/models/base/".format(BASE_DIR))
 print(sys.path)
-from bert_models import MeanBertForSequenceRegression, RobertForSequenceRegression
+# from bert_models import MeanBertForSequenceRegression, RobertForSequenceRegression
 
 
 class GradientReverse(torch.autograd.Function):
@@ -63,7 +64,6 @@ class AdaptedMeanBertForSequenceRegression(nn.Module):
 
 				if num_output > 1:
 						self.fc_confounds = nn.Linear(config.hidden_size, hid_dim)
-						self.relu_confounds = nn.ReLU()
 						self.output_layer_confounds = nn.Linear(hid_dim, num_output - 1)
 
 				self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -79,14 +79,7 @@ class AdaptedMeanBertForSequenceRegression(nn.Module):
 
 				confounds_pred = None
 				target_pred = self.output_layer(self.relu(self.fc1(sent_embs)))
-
-				if self.num_output > 1:
-					sent_embs = grad_reverse(sent_embs)
-					confounds_pred = self.output_layer_confounds(self.relu_confounds(self.fc_confounds(sent_embs)))
-					# return torch.cat((target_pred, confounds_pred), 0)
-					return target_pred
-				else:
-					return target_pred
+				return target_pred
 
 
 class AdaptedRobertForSequenceRegression(nn.Module):
@@ -101,8 +94,12 @@ class AdaptedRobertForSequenceRegression(nn.Module):
 
 		self.dropout = nn.Dropout(config.hidden_dropout_prob)
 		self.fc1 = nn.Linear(recurrent_hidden_size, recurrent_hidden_size)
-		self.output_layer = nn.Linear(recurrent_hidden_size, num_output)
+		self.output_layer = nn.Linear(recurrent_hidden_size, 1)
 		self.gru = torch.nn.GRU(config.hidden_size, recurrent_hidden_size, recurrent_num_layers, batch_first=True)
+
+		if num_output > 1:
+				self.fc_confounds = nn.Linear(recurrent_hidden_size, recurrent_hidden_size)
+				self.output_layer_confounds = nn.Linear(recurrent_hidden_size, num_output - 1)
 
 		model_parameters = filter(lambda p: p.requires_grad, self.parameters())
 		print ("Number of model params", sum([np.prod(p.size()) for p in model_parameters]))
@@ -117,7 +114,9 @@ class AdaptedRobertForSequenceRegression(nn.Module):
 		sent_embs = self.dropout(outputs[0].mean(dim=1)) # [n_sent, config.hidden_size]
 		sent_embs = sent_embs.unsqueeze(0)
 		recurrent_output = self.gru(sent_embs)[1].squeeze() # [recurrent_hidden_size]
-		return self.output_layer(F.relu(self.fc1(recurrent_output))) # [1, num_output]
+
+		target_pred = self.output_layer(F.relu(self.fc1(recurrent_output))) # [1, num_output]
+		return target_pred
 
 
 def visualize_text(datarecords):
@@ -153,20 +152,20 @@ def get_best_model(outcome):
 				model_path = '{}{}{}e7_loss1.0341.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
 
 		elif outcome == 'mn_avg_eb_adv':				
-				MODEL_DIR = 'runs/bert_reviews/Apr28_2020/debug/'
-				BEST_MODEL_DIR = 'adv_dropout_0.3-hid_dim_256-lr_0.0001-model_type_meanbert-outcome_mn_avg_eb/'
-				model_path = '{}{}{}e5_loss1.2159.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
+				MODEL_DIR = 'runs/bert_reviews/May13_2020/adversarial_training/'
+				BEST_MODEL_DIR = 'adv_terms_perfrl_perwht-dropout_0.3-hid_dim_256-lr_0.0001-model_type_meanbert-outcome_mn_avg_eb/'
+				model_path = '{}{}{}e4_loss1.1809.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
 
 		elif outcome == 'mn_grd_eb':
 				MODEL_DIR = 'runs/bert_reviews/Mar23_2020/mn_grd_eb/'
 				BEST_MODEL_DIR = 'dropout_0.3-hid_dim_256-lr_0.0001-model_type_meanbert-outcome_mn_grd_eb/'
 				model_path = '{}{}{}e4_loss0.0326.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
 
+		elif outcome == 'top_level_adv':
+				MODEL_DIR = 'runs/bert_reviews/May13_2020/adversarial_training/'
+				BEST_MODEL_DIR = 'adv_terms_perfrl_perwht-dropout_0.3-hid_dim_768-lr_0.0001-model_type_robert-n_layers_1-outcome_top_level/'
+				model_path = '{}{}{}e2_loss0.4334.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)			
 		else:
-				# MODEL_DIR = 'runs/bert_reviews/Apr03_2020/top_level/'
-				# BEST_MODEL_DIR = 'dropout_0.1-hid_dim_768-lr_0.0001-model_type_robert-n_layers_2-outcome_top_level/'
-				# model_path = '{}{}{}e6_loss0.2239.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
-
 				MODEL_DIR = 'runs/bert_reviews/Apr04_2020/top_level/'
 				BEST_MODEL_DIR = 'dropout_0.3-hid_dim_768-lr_0.0001-model_type_robert-n_layers_1-outcome_top_level/'
 				model_path = '{}{}{}e6_loss0.2270.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
@@ -195,7 +194,9 @@ def get_best_model(outcome):
 
 		else:
 				num_layers = int(BEST_MODEL_DIR.split('n_layers_')[1].split('-')[0])
-				model = AdaptedRobertForSequenceRegression(config, recurrent_hidden_size=hidden_dim, num_output=1, recurrent_num_layers=num_layers)
+				if outcome == 'top_level_adv':
+					num_output = 3
+				model = AdaptedRobertForSequenceRegression(config, recurrent_hidden_size=hidden_dim, num_output=num_output, recurrent_num_layers=num_layers)
 				for k in state_dict:
 						curr_key = k
 						if curr_key.startswith(('model.bert', 'model.fc1', 'model.gru', 'model.output_layer', 'model.fc_confounds', 'model.gru_confounds', 'model.output_layer_confounds')):
@@ -207,7 +208,7 @@ def get_best_model(outcome):
 
 
 def compute_and_output_attributions(
-				outcome='mn_avg_eb_adv'
+				outcome='top_level_adv'
 		):
 
 		import pickle
@@ -220,12 +221,13 @@ def compute_and_output_attributions(
 				prepared_data_file = PREPARED_DATA_FILE_mn_avg_eb
 		elif outcome == 'mn_avg_eb_adv':
 				prepared_data_file = PREPARED_DATA_FILE_mn_avg_eb_adv
+		elif outcome == 'top_level_adv':
+				prepared_data_file = PREPARED_DATA_FILE_top_level_adv
 		else:
 				prepared_data_file = PREPARED_DATA_FILE_mn_grd_eb
 
-		# TODO(ng): Change this back so we can still load non adversarial data!!!
 		with open(prepared_data_file, 'rb') as f:
-				 all_input_ids, labels_test_score, perfrl, perwht, attention_masks, sentences_per_school = pickle.load(f, encoding='latin1')
+				 all_input_ids, labels_target, attention_masks, sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate = pickle.load(f, encoding='latin1')
 
 		device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 		# device = "cpu"
@@ -260,14 +262,19 @@ def compute_and_output_attributions(
 		internal_batch_size = 12
 		n_steps = 48
 
-		OUTPUT_FILE = '{}interp/attributions/{}/{}_{}_loss_{}.json'
+		OUTPUT_DIR = '{}interp/attributions/{}/'
+		OUTPUT_FILE = OUTPUT_DIR + '{}_{}_loss_{}.json'
+		if not os.path.exists(OUTPUT_DIR.format(BASE_DIR, BEST_MODEL_DIR)):
+			os.makedirs(OUTPUT_DIR.format(BASE_DIR, BEST_MODEL_DIR))
+
+		start_ind = len([int(f.split('_')[0]) for f in os.listdir(OUTPUT_DIR.format(BASE_DIR, BEST_MODEL_DIR))])
 
 		for d in data_splits:
 
 				n_schools = torch.LongTensor(all_input_ids[d]).size(0)
 				print ("num schools {} for {} split".format(n_schools, d))
 				
-				for i in range(0, n_schools):
+				for i in range(start_ind, n_schools):
 						
 						print (d, i)
 
@@ -277,10 +284,14 @@ def compute_and_output_attributions(
 						
 						# Prepare data
 						input_ids = torch.LongTensor([all_input_ids[d][i]]).squeeze(0).to(device)
-						label_t = torch.tensor([labels_test_score[d][i]]).to(device)
+						label_t = torch.tensor([labels_target[d][i]]).to(device)
+						input_mask = torch.tensor([attention_masks[d][i]]).squeeze(0).to(device)
 						label_perfrl = torch.tensor([perfrl[d][i]]).to(device)
 						label_perwht = torch.tensor([perwht[d][i]]).to(device)
-						input_mask = torch.tensor([attention_masks[d][i]]).squeeze(0).to(device)
+						lable_share_singleparent = torch.tensor([share_singleparent[d][i]]).to(device)
+						label_totenrl = torch.tensor([totenrl[d][i]]).to(device)
+						label_share_collegeplus = torch.tensor([share_collegeplus[d][i]]).to(device)
+						label_mail_returnrate = torch.tensor([mail_returnrate[d][i]]).to(device)
 
 						pred = model(input_ids, attention_mask=input_mask)								
 						# print ('pred and actual: ', pred, label_t)

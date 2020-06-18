@@ -18,7 +18,7 @@ Looking in: runs/bert_reviews/Mar11_2020/
 ```
 
 ## Run a sweep
-PYTHONPATH=. python src/models/sweeps/bert_reviews_sweep.py --outcome mn_avg_eb --groupname adversarial_training
+PYTHONPATH=. python src/models/sweeps/bert_reviews_sweep.py --outcome mn_avg_eb --groupname pred_confounds --adv_terms=perwht,perfrl
 
 ## Location of runs
 runs/bert_reviews/Mar08_20/testadvloss/lr0.01_hiddim64/

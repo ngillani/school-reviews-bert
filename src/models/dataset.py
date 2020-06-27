@@ -121,12 +121,22 @@ def load_and_cache_data(
 			pickle.dump((input_ids, labels_target, attention_masks, sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate), f)
 			print('Data written to disk')
 
-	# tensorize everything
-	for dataset in [input_ids, labels_target, attention_masks, sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate]:
-		for d in dataset:
-			dataset[d] = torch.tensor(dataset[d])
+	# Standardize and tensorize everything
+	for d in ['train', 'validation']:
+		labels_target[d] = torch.FloatTensor((labels_target[d] - np.mean(df[outcome])) / np.std(df[outcome]))
+		perfrl[d] = torch.FloatTensor((perfrl[d] - np.mean(df['perfrl'])) / np.std(df['perfrl']))
+		perwht[d] = torch.FloatTensor((perwht[d] - np.mean(df['perwht'])) / np.std(df['perwht']))
+		share_singleparent[d] = torch.FloatTensor((share_singleparent[d] - np.mean(df['singleparent_share2010'])) / np.std(df['singleparent_share2010']))
+		totenrl[d] = torch.FloatTensor((totenrl[d] - np.mean(df['totenrl'])) / np.std(df['totenrl']))
+		share_collegeplus[d] = torch.FloatTensor((share_collegeplus[d] - np.mean(df['frac_coll_plus2010'])) / np.std(df['frac_coll_plus2010']))
+		mail_returnrate[d] = torch.FloatTensor((mail_returnrate[d] - np.mean(df['mail_return_rate2010'])) / np.std(df['mail_return_rate2010']))
+		
+		url[d] = torch.tensor(url[d])
+		sentences_per_school[d] = torch.tensor(sentences_per_school[d])
+		input_ids[d] = torch.tensor(input_ids[d])
+		attention_masks[d] = torch.tensor(attention_masks[d])
 
 	return input_ids, labels_target, attention_masks, sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate
 
 if __name__ == "__main__":
-	load_and_cache_data(outcome='top_level')
+	load_and_cache_data(outcome='mn_grd_eb')

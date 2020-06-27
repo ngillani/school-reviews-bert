@@ -18,10 +18,13 @@ import sys
 
 # from utils.header import *
 
-BASE_DIR = '/home/ubuntu/school_reviews/school_reviews_bert/'
-PREPARED_DATA_FILE_mn_avg_eb = '{}data/Parent_gs_comments_by_school_mn_avg_eb_1.7682657723517046.p'.format(BASE_DIR)
-PREPARED_DATA_FILE_mn_grd_eb = '{}data/Parent_gs_comments_by_school_mn_grd_eb_0.034058608806675876.p'.format(BASE_DIR)
-PREPARED_DATA_FILE_top_level = '{}data/Parent_gs_comments_by_school_top_level_1.3187244708547647.p'.format(BASE_DIR)
+# BASE_DIR = '/home/ubuntu/school_reviews/school_reviews_bert/'
+BASE_DIR = '/media/jessica/ngillani/school_ratings_2.0/'
+# PREPARED_DATA_FILE_mn_avg_eb = '{}data/Parent_gs_comments_by_school_mn_avg_eb_1.7682657723517046.p'.format(BASE_DIR)
+PREPARED_DATA_FILE_mn_avg_eb = '{}data/Parent_gs_comments_by_school_with_covars_mn_avg_eb_1.753468860986852.p'.format(BASE_DIR)
+# PREPARED_DATA_FILE_mn_grd_eb = '{}data/Parent_gs_comments_by_school_mn_grd_eb_0.034058608806675876.p'.format(BASE_DIR)
+PREPARED_DATA_FILE_mn_grd_eb = '{}data/Parent_gs_comments_by_school_with_covars_mn_grd_eb_0.03407799589996242.p'.format(BASE_DIR)
+PREPARED_DATA_FILE_top_level = '{}data/Parent_gs_comments_by_school_with_covars_top_level_1.304894531887436.p'.format(BASE_DIR)
 PREPARED_DATA_FILE_mn_avg_eb_adv = '{}data/Parent_gs_comments_by_school_with_covars_mn_avg_eb_1.753468860986852.p'.format(BASE_DIR)
 PREPARED_DATA_FILE_top_level_adv = '{}data/Parent_gs_comments_by_school_with_covars_top_level_1.304894531887436.p'.format(BASE_DIR)
 # PREPARED_DATA_FILE_mn_avg_eb_adv = '{}data/tiny_Parent_gs_comments_by_school_with_covars_mn_avg_eb_1.8568614088656685.p'.format(BASE_DIR)
@@ -79,6 +82,7 @@ class AdaptedMeanBertForSequenceRegression(nn.Module):
 
 				confounds_pred = None
 				target_pred = self.output_layer(self.relu(self.fc1(sent_embs)))
+				# target_pred = self.output_layer_confounds(self.relu(self.fc_confounds(sent_embs)))
 				return target_pred
 
 
@@ -147,28 +151,42 @@ def visualize_text(datarecords):
 def get_best_model(outcome):
 
 		if outcome == 'mn_avg_eb':
-				MODEL_DIR = 'runs/bert_reviews/Mar15_2020/mn_avg_eb/'
+				MODEL_DIR = 'runs/bert_reviews/Jun17_2020/mn_avg_eb/'
 				BEST_MODEL_DIR = 'dropout_0.3-hid_dim_256-lr_0.0001-model_type_meanbert-outcome_mn_avg_eb/'		
-				model_path = '{}{}{}e7_loss1.0341.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
+				model_path = '{}{}{}e7_loss1.0226.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
 
 		elif outcome == 'mn_avg_eb_adv':				
-				MODEL_DIR = 'runs/bert_reviews/May13_2020/adversarial_training/'
-				BEST_MODEL_DIR = 'adv_terms_perfrl_perwht-dropout_0.3-hid_dim_256-lr_0.0001-model_type_meanbert-outcome_mn_avg_eb/'
-				model_path = '{}{}{}e4_loss1.1809.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
+				# MODEL_DIR = 'runs/bert_reviews/May13_2020/adversarial_training/'
+				# BEST_MODEL_DIR = 'adv_terms_perfrl_perwht-dropout_0.3-hid_dim_256-lr_0.0001-model_type_meanbert-outcome_mn_avg_eb/'
+				# model_path = '{}{}{}e4_loss1.1809.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
+
+				# Income pred
+				MODEL_DIR = 'runs/bert_reviews/Jun18_2020/income_pred/'
+				BEST_MODEL_DIR = 'dropout_0.3-hid_dim_256-lr_0.0001-model_type_meanbert-outcome_perfrl/'		
+				model_path = '{}{}{}e4_loss0.0675.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
+
+				# # ## Race pred
+				# MODEL_DIR = 'runs/bert_reviews/Jun18_2020/race_pred/'
+				# BEST_MODEL_DIR = 'dropout_0.3-hid_dim_256-lr_0.0001-model_type_meanbert-outcome_perwht/'		
+				# model_path = '{}{}{}e4_loss0.0389.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
 
 		elif outcome == 'mn_grd_eb':
-				MODEL_DIR = 'runs/bert_reviews/Mar23_2020/mn_grd_eb/'
+				# MODEL_DIR = 'runs/bert_reviews/Mar23_2020/mn_grd_eb/'
+				# BEST_MODEL_DIR = 'dropout_0.3-hid_dim_256-lr_0.0001-model_type_meanbert-outcome_mn_grd_eb/'
+				# model_path = '{}{}{}e4_loss0.0326.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
+
+				MODEL_DIR = 'runs/bert_reviews/Jun17_2020/mn_grd_eb/'
 				BEST_MODEL_DIR = 'dropout_0.3-hid_dim_256-lr_0.0001-model_type_meanbert-outcome_mn_grd_eb/'
-				model_path = '{}{}{}e4_loss0.0326.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
+				model_path = '{}{}{}e3_loss0.0329.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
 
 		elif outcome == 'top_level_adv':
 				MODEL_DIR = 'runs/bert_reviews/May13_2020/adversarial_training/'
 				BEST_MODEL_DIR = 'adv_terms_perfrl_perwht-dropout_0.3-hid_dim_768-lr_0.0001-model_type_robert-n_layers_1-outcome_top_level/'
 				model_path = '{}{}{}e2_loss0.4334.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)			
 		else:
-				MODEL_DIR = 'runs/bert_reviews/Apr04_2020/top_level/'
+				MODEL_DIR = 'runs/bert_reviews/May26_2020/limited_five_star/'
 				BEST_MODEL_DIR = 'dropout_0.3-hid_dim_768-lr_0.0001-model_type_robert-n_layers_1-outcome_top_level/'
-				model_path = '{}{}{}e6_loss0.2270.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
+				model_path = '{}{}{}e8_loss0.2495.pt'.format(BASE_DIR, MODEL_DIR, BEST_MODEL_DIR)
 
 		dropout_prob = float(BEST_MODEL_DIR.split('dropout_')[1].split('-')[0])
 		config = BertConfig(output_attentions=True, hidden_dropout_prob=dropout_prob, attention_probs_dropout_prob=dropout_prob)
@@ -177,38 +195,71 @@ def get_best_model(outcome):
 		state_dict = torch.load(model_path, map_location=torch.device('cpu'))
 		updated_state_dict = OrderedDict()
 
+		num_output = 1
+		
 		# Load state dict and do some post-processing to map variable names correctly
 		if outcome in ['mn_avg_eb', 'mn_grd_eb', 'mn_avg_eb_adv']:
-				num_output = 1
-				if outcome == 'mn_avg_eb_adv':
-						num_output = 3
-				model = AdaptedMeanBertForSequenceRegression(config, hid_dim=hidden_dim, num_output=num_output)
-				for k in state_dict:
-						curr_key = k
-						if curr_key.startswith(('model.bert', 'model.fc1', 'model.output_layer', 'model.fc_confounds', 'model.gru_confounds', 'model.output_layer_confounds')):
-								curr_key = curr_key.split('model.')[1]
-						updated_state_dict[curr_key] = state_dict[k]
-						
-				model.load_state_dict(updated_state_dict)
-				return model, BEST_MODEL_DIR
+			print ('Loading adapted mean bert!')
+			if outcome == 'mn_avg_eb_adv':
+				num_output = 2
+			model = AdaptedMeanBertForSequenceRegression(config, hid_dim=hidden_dim, num_output=num_output)
+			for k in state_dict:
+					curr_key = k
+					if curr_key.startswith(('model.bert', 'model.fc1', 'model.output_layer', 'model.fc_confounds', 'model.output_layer_confounds')):
+						curr_key = curr_key.split('model.')[1]
+					updated_state_dict[curr_key] = state_dict[k]
+					
+			model.load_state_dict(updated_state_dict)
+			return model, BEST_MODEL_DIR
 
 		else:
-				num_layers = int(BEST_MODEL_DIR.split('n_layers_')[1].split('-')[0])
-				if outcome == 'top_level_adv':
-					num_output = 3
-				model = AdaptedRobertForSequenceRegression(config, recurrent_hidden_size=hidden_dim, num_output=num_output, recurrent_num_layers=num_layers)
-				for k in state_dict:
-						curr_key = k
-						if curr_key.startswith(('model.bert', 'model.fc1', 'model.gru', 'model.output_layer', 'model.fc_confounds', 'model.gru_confounds', 'model.output_layer_confounds')):
-								curr_key = curr_key.split('model.')[1]
-						updated_state_dict[curr_key] = state_dict[k]
-						
-				model.load_state_dict(updated_state_dict)
-				return model, BEST_MODEL_DIR
+			num_layers = int(BEST_MODEL_DIR.split('n_layers_')[1].split('-')[0])
+			if outcome == 'top_level_adv':
+				num_output = 3
+			model = AdaptedRobertForSequenceRegression(config, recurrent_hidden_size=hidden_dim, num_output=num_output, recurrent_num_layers=num_layers)
+			for k in state_dict:
+					curr_key = k
+					if curr_key.startswith(('model.bert', 'model.fc1', 'model.gru', 'model.output_layer', 'model.fc_confounds', 'model.gru_confounds', 'model.output_layer_confounds')):
+							curr_key = curr_key.split('model.')[1]
+					updated_state_dict[curr_key] = state_dict[k]
+					
+			model.load_state_dict(updated_state_dict)
+			return model, BEST_MODEL_DIR
+
+
+def output_data_to_covar_mapping(
+				prepared_data_files=[PREPARED_DATA_FILE_mn_avg_eb_adv],
+				output_file='{}data/{}_validation_covar_mapping.json'
+		):
+
+		import pickle
+
+		for prepared_data_file in prepared_data_files:
+			prepared_data_file = prepared_data_file.format(BASE_DIR)
+			with open(prepared_data_file, 'rb') as f:
+					all_input_ids, labels_target, attention_masks, sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate = pickle.load(f, encoding='latin1')
+
+			mapping = defaultdict(dict)
+			for i in range(0, len(all_input_ids['validation'])):
+				print (prepared_data_file, i)
+				mapping[i] = {
+					'url': url['validation'][i],
+					'perfrl': perfrl['validation'][i],
+					'perwht': perwht['validation'][i],
+					'share_singleparent': share_singleparent['validation'][i],
+					'totenrl': totenrl['validation'][i],
+					'share_collegeplus': share_collegeplus['validation'][i],
+					'mail_returnrate': mail_returnrate['validation'][i],
+				}
+			
+			f = open(output_file.format(BASE_DIR, prepared_data_file.split('/')[-1]), 'w')
+			f.write(json.dumps(mapping, indent=4))
+			f.close()
+
 
 
 def compute_and_output_attributions(
-				outcome='top_level_adv'
+				outcome='mn_grd_eb'
 		):
 
 		import pickle
@@ -227,7 +278,7 @@ def compute_and_output_attributions(
 				prepared_data_file = PREPARED_DATA_FILE_mn_grd_eb
 
 		with open(prepared_data_file, 'rb') as f:
-				 all_input_ids, labels_target, attention_masks, sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate = pickle.load(f, encoding='latin1')
+				 all_input_ids, labels_target, attention_masks, sentences_per_school, url, perwht, perfrl, share_singleparent, totenrl, share_collegeplus, mail_returnrate = pickle.load(f, encoding='latin1')
 
 		device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 		# device = "cpu"
@@ -296,6 +347,8 @@ def compute_and_output_attributions(
 						pred = model(input_ids, attention_mask=input_mask)								
 						# print ('pred and actual: ', pred, label_t)
 						mse = F.mse_loss(pred[0].unsqueeze_(0), label_t)
+						# mse = F.mse_loss(pred[0].unsqueeze_(0), label_perfrl)
+						# mse = F.mse_loss(pred[0].unsqueeze_(0), label_perwht)
 						if pred.size()[0] > 1:
 								mse_perfrl = F.mse_loss(pred[1].unsqueeze_(0), label_perfrl)
 								mse_perwht = F.mse_loss(pred[2].unsqueeze_(0), label_perwht)
@@ -337,3 +390,4 @@ def compute_and_output_attributions(
 
 if __name__ == "__main__":
 	compute_and_output_attributions()
+	# output_data_to_covar_mapping()

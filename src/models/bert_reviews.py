@@ -105,6 +105,7 @@ class BertReviewsModel(TrainNN):
         t_loss = F.mse_loss(predicted_t, actual_t)
         all_losses = {'loss_target': t_loss}
         total_loss = t_loss.clone()
+        # total_loss = 0
 
         # Sort keys in alphabetical order
         for i in range(0, len(self.hp.adv_terms)):

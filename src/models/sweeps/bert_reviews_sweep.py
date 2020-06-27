@@ -38,7 +38,7 @@ GRID = {
         'perfrl,perwht',
         'share_collegeplus',
         'share_singleparent',
-        'totenrl'
+    #     'totenrl'
     ]
 }
 

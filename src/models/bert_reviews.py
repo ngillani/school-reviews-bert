@@ -70,11 +70,11 @@ class BertReviewsModel(TrainNN):
         num_output = 1 + len(hp.adv_terms)
 
         self.tr_loader = make_dataloader(
-            (input_ids['train'], labels_target['train'], attention_masks['train'], sentences_per_school['train'], url['train'], perwht['train'], perfrl['train'], share_singleparent['train'], totenrl['train'], share_collegeplus['train'], mail_returnrate['train']),
+            (input_ids['train'], labels_target['train'], attention_masks['train'], sentences_per_school['train'], url['train'], perfrl['train'], perwht['train'], share_singleparent['train'], totenrl['train'], share_collegeplus['train'], mail_returnrate['train']),
             hp.batch_size)
 
         self.val_loader  = make_dataloader(
-            (input_ids['validation'], labels_target['validation'], attention_masks['validation'], sentences_per_school['validation'], url['validation'], perwht['validation'], perfrl['validation'], share_singleparent['validation'], totenrl['validation'], share_collegeplus['validation'], mail_returnrate['validation']),
+            (input_ids['validation'], labels_target['validation'], attention_masks['validation'], sentences_per_school['validation'], url['validation'], perfrl['validation'], perwht['validation'], share_singleparent['validation'], totenrl['validation'], share_collegeplus['validation'], mail_returnrate['validation']),
             hp.batch_size)
 
         # Model 
@@ -107,7 +107,6 @@ class BertReviewsModel(TrainNN):
         total_loss = t_loss.clone()
         # total_loss = 0
 
-        # Sort keys in alphabetical order
         for i in range(0, len(self.hp.adv_terms)):
             # print ('sizes confounds: ', predicted_adv[i].size(), actual_adv[i].size())
             all_losses['loss_' + self.hp.adv_terms[i]] = F.mse_loss(predicted_adv[i], actual_adv[i])

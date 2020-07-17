@@ -2,7 +2,8 @@ runs/
 data
 .email_config.json*
 interp/venv/
+interp/venv
 interp/img/
 interp/attributions/
-
+interp/.ipynb_checkpoints/*
 *.pyc

@@ -50,23 +50,31 @@ class RobertForSequenceRegression(nn.Module):
 
 	'''
 		input_ids = n_schools x n_sent x max_len
-		sents_per_school = tensor of ints per school
+		num_sentences_per_school = tensor of ints per school
 	'''
-	def forward(self, input_ids, sents_per_school, attention_mask=None):
+	def forward(self, input_ids, num_sentences_per_school, attention_mask=None):
 		n_schools, n_sent, max_len = input_ids.size()
 		inputs = input_ids.view(-1, max_len) # [n_schools * n_sent, max_len]
 		
-		if attention_mask is not None:
-			attends = attention_mask.view(-1, max_len)
-			outputs = self.bert(inputs, attention_mask=attends) # [n_schools * n_sent, dim]
-		else:
-			outputs = self.bert(inputs)
+		attends = attention_mask.view(-1, max_len)
+		outputs = self.bert(inputs, attention_mask=attends) # [n_schools * n_sent, max_len, dim]
+		bert_last_layer_output = outputs[0] # [n_schools * n_sent, max_len, dim]
 
-		sent_embs = self.dropout(outputs[0].mean(dim=1)) # [n_schools * n_sent, config.hidden_size]
+		## OLD CODE
+		# sent_embs = self.dropout(bert_last_layer_output.mean(dim=1)) # [n_schools * n_sent, dim]
+		
+		rep_mask = attends.unsqueeze_(-1).expand(bert_last_layer_output.size()) # [n_schools * n_sent, max_len, dim]
+		summed_tokens = torch.sum(torch.mul(bert_last_layer_output, rep_mask), dim=1)  # [n_schools * n_sent, dim]
+		num_unmasked = attends.sum(dim=1).expand(summed_tokens.size()) # [n_schools * n_sent, dim]
+		
+		# Clamp to avoid getting NaNs in the event that a sentence is completely padding (i.e. has 0 unmasked tokens)
+		sent_embs = summed_tokens / torch.clamp(num_unmasked, 1) # [n_schools * n_sent, dim]
+		sent_embs = self.dropout(sent_embs)
+
 		sent_embs = sent_embs.view(n_schools, n_sent, sent_embs.size(-1))
-		packed_sent_embs = torch.nn.utils.rnn.pack_padded_sequence(sent_embs, sents_per_school,
+		packed_sent_embs = torch.nn.utils.rnn.pack_padded_sequence(sent_embs, num_sentences_per_school,
 																   batch_first=True)
-		recurrent_output = self.gru(packed_sent_embs)[1].squeeze(0) # [n_schools, recurrent_hidden_size]
+		recurrent_output = self.gru(packed_sent_embs)[1].squeeze(0) # [n_schools, dim]
 		
 		confounds_pred = None
 		target_pred = self.output_layer(self.relu(self.fc1(recurrent_output)))
@@ -105,21 +113,34 @@ class MeanBertForSequenceRegression(nn.Module):
 
 	'''
 		input_ids = n_schools x n_sent x max_len
+		num_sentences_per_school = tensor of ints per school
 	'''
-	def forward(self, input_ids, attention_mask=None):
+	def forward(self, input_ids, num_sentences_per_school, attention_mask=None):
 		n_schools, n_sent, max_len = input_ids.size()
 		inputs = input_ids.view(-1, max_len) # [n_schools * n_sent, max_len]
 
-		if attention_mask is not None:
-			attends = attention_mask.view(-1, max_len)
-			outputs = self.bert(inputs, attention_mask=attends) # [n_schools * n_sent, dim]
-		else:
-			outputs = self.bert(inputs)
+		attends = attention_mask.view(-1, max_len) # [n_schools * n_sent, max_len]
+		outputs = self.bert(inputs, attention_mask=attends)
+		bert_last_layer_output = outputs[0] # [n_schools * n_sent, max_len, dim]
 
-		sent_embs = self.dropout(outputs[0].mean(dim=1)) # [n_schools * n_sent, config.hidden_size]
-		sent_embs = sent_embs.view(n_schools, n_sent, sent_embs.size(-1))
-		sent_embs = sent_embs.mean(dim=1) # [n_schools, config.hidden_size]
+		## OLD CODE
+		# sent_embs = self.dropout(bert_last_layer_output.mean(dim=1)) # [n_schools * n_sent, dim]
 		
+		rep_mask = attends.unsqueeze_(-1).expand(bert_last_layer_output.size()) # [n_schools * n_sent, max_len, dim]
+		summed_tokens = torch.sum(torch.mul(bert_last_layer_output, rep_mask), dim=1)  # [n_schools * n_sent, dim]
+		num_unmasked = attends.sum(dim=1).expand(summed_tokens.size()) # [n_schools * n_sent, dim]
+		
+		# Clamp to avoid getting NaNs in the event that a sentence is completely padding (i.e. has 0 unmasked tokens)
+		sent_embs = summed_tokens / torch.clamp(num_unmasked, 1) # [n_schools * n_sent, dim]
+		sent_embs = self.dropout(sent_embs)
+
+		sent_embs = sent_embs.view(n_schools, n_sent, sent_embs.size(-1)) # [n_schools, n_sent, dim]
+
+		## OLD CODE
+		# sent_embs = sent_embs.mean(dim=1) # [n_schools, dim]
+		
+		sent_embs = torch.stack([torch.mean(sent_embs[i, :int(l.item()), :], dim=0) for i, l in enumerate(num_sentences_per_school)]) # [n_schools, dim]
+
 		confounds_pred = None
 		target_pred = self.output_layer(self.relu(self.fc1(sent_embs)))
 	
@@ -182,7 +203,7 @@ if __name__ == "__main__":
 		n_sent = 50
 		max_len = 64
 		input_ids = torch.zeros(n_schools, n_sent, max_len).long().cuda()
-		sents_per_school = torch.tensor([50, 48, 46, 3]).cuda()
-		output = robert(input_ids, sents_per_school)
+		num_sentences_per_school = torch.tensor([50, 48, 46, 3]).cuda()
+		output = robert(input_ids, num_sentences_per_school)
 		t_loss = loss_fct.compute_loss(output, torch.tensor([10.0, 2.0, 3.0, 1.0]).cuda())
 		t_loss.backward()

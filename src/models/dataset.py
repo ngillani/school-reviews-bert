@@ -106,13 +106,14 @@ def load_and_cache_data(
 						if i >= MAX_SENTENCES_PER_SCHOOL - 1:
 							break
 					# Pad sentences if needed
+					num_school_sent_before_padding = float(len(token_id_vectors))
 					while len(token_id_vectors) < MAX_SENTENCES_PER_SCHOOL:
 						token_id_vectors.append([0] * max_len)
 						attention_mask_vectors.append([0.0] * max_len)
 
 					input_ids[d].append(token_id_vectors)
 					attention_masks[d].append(attention_mask_vectors)
-					sentences_per_school[d].append(float(len(token_id_vectors)))
+					sentences_per_school[d].append(num_school_sent_before_padding)
 				except:
 					raise
 					pdb.set_trace()
@@ -139,4 +140,4 @@ def load_and_cache_data(
 	return input_ids, labels_target, attention_masks, sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate
 
 if __name__ == "__main__":
-	load_and_cache_data(outcome='mn_grd_eb')
+	load_and_cache_data(outcome='perfrl')

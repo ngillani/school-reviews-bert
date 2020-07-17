@@ -40,7 +40,7 @@ class HParams():
         self.lr_decay = 0.9999
         self.min_lr = 0.00001  #
         self.grad_clip = 1.0
-        self.max_epochs = 12
+        self.max_epochs = 15
 
         # Data
         self.max_len = 30
@@ -164,7 +164,7 @@ class BertReviewsModel(TrainNN):
         
         input_ids, target, input_mask, num_sentences_per_school, url, perfrl, perwht, share_singleparent, totenrl, share_collegeplus, mail_returnrate = batch
         num_sentences_per_school, perm = torch.sort(num_sentences_per_school, descending=True)
-        num_sentences_per_school =  nn_utils.move_to_cuda(num_sentences_per_school)
+        num_sentences_per_school = nn_utils.move_to_cuda(num_sentences_per_school)
         input_ids =  nn_utils.move_to_cuda(input_ids[perm, :, :])
         input_mask =  nn_utils.move_to_cuda(input_mask[perm, :, :])
         target =  nn_utils.move_to_cuda(target[perm].unsqueeze_(1))
@@ -176,7 +176,7 @@ class BertReviewsModel(TrainNN):
         mail_returnrate = nn_utils.move_to_cuda(mail_returnrate[perm].unsqueeze_(1))
                 
         if self.hp.model_type == 'meanbert':
-    	    predicted_target, predicted_confounds = self.model(input_ids, attention_mask=input_mask)  # [bsz] (n_outcomes)
+    	    predicted_target, predicted_confounds = self.model(input_ids, num_sentences_per_school, attention_mask=input_mask)  # [bsz] (n_outcomes)
         elif self.hp.model_type == 'robert':
             predicted_target, predicted_confounds = self.model(input_ids, num_sentences_per_school, attention_mask=input_mask)  # [bsz] (n_outcomes)
 

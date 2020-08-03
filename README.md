@@ -11,10 +11,11 @@ Welcome!  This repository contains code used for constructing and running the BE
 ## Useful commands
 
 ### Running IG on bert models (after initializing virtual env)
-sudo CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python3.6 interp/bert_interpret.py
+sudo bash
+source venv/bin/activate
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python3.6 interp/bert_interpret.py
 
-
-### One run (e.g. for debugging)
+### One run (e.g. for debugging)  (after initializing virtual env)
 CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python2 src/models/bert_reviews.py --groupname 'mn_avg_eb_meanbert' --outcome 'mn_avg_eb'
 CUDA_VISIBLE_DEVICES=1 PYTHONPATH=. python2 src/models/bert_reviews.py --groupname 'mn_avg_eb_robert' --outcome 'mn_avg_eb' --model_type 'robert' --hid_dim 768
 

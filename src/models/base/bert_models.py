@@ -60,9 +60,6 @@ class RobertForSequenceRegression(nn.Module):
 		outputs = self.bert(inputs, attention_mask=attends) # [n_schools * n_sent, max_len, dim]
 		bert_last_layer_output = outputs[0] # [n_schools * n_sent, max_len, dim]
 
-		## OLD CODE
-		# sent_embs = self.dropout(bert_last_layer_output.mean(dim=1)) # [n_schools * n_sent, dim]
-		
 		rep_mask = attends.unsqueeze_(-1).expand(bert_last_layer_output.size()) # [n_schools * n_sent, max_len, dim]
 		summed_tokens = torch.sum(torch.mul(bert_last_layer_output, rep_mask), dim=1)  # [n_schools * n_sent, dim]
 		num_unmasked = attends.sum(dim=1).expand(summed_tokens.size()) # [n_schools * n_sent, dim]
@@ -123,9 +120,6 @@ class MeanBertForSequenceRegression(nn.Module):
 		outputs = self.bert(inputs, attention_mask=attends)
 		bert_last_layer_output = outputs[0] # [n_schools * n_sent, max_len, dim]
 
-		## OLD CODE
-		# sent_embs = self.dropout(bert_last_layer_output.mean(dim=1)) # [n_schools * n_sent, dim]
-		
 		rep_mask = attends.unsqueeze_(-1).expand(bert_last_layer_output.size()) # [n_schools * n_sent, max_len, dim]
 		summed_tokens = torch.sum(torch.mul(bert_last_layer_output, rep_mask), dim=1)  # [n_schools * n_sent, dim]
 		num_unmasked = attends.sum(dim=1).expand(summed_tokens.size()) # [n_schools * n_sent, dim]
@@ -136,9 +130,6 @@ class MeanBertForSequenceRegression(nn.Module):
 
 		sent_embs = sent_embs.view(n_schools, n_sent, sent_embs.size(-1)) # [n_schools, n_sent, dim]
 
-		## OLD CODE
-		# sent_embs = sent_embs.mean(dim=1) # [n_schools, dim]
-		
 		sent_embs = torch.stack([torch.mean(sent_embs[i, :int(l.item()), :], dim=0) for i, l in enumerate(num_sentences_per_school)]) # [n_schools, dim]
 
 		confounds_pred = None
@@ -194,16 +185,4 @@ class BertEncoderForComments(nn.Module):
 
 
 if __name__ == "__main__":
-		from transformers import BertConfig
-		config = BertConfig(output_attentions=True)
-		robert = RobertForSequenceRegression(config)
-		loss_fct = StraightUpLoss()        
-		robert.cuda()
-		n_schools = 4
-		n_sent = 50
-		max_len = 64
-		input_ids = torch.zeros(n_schools, n_sent, max_len).long().cuda()
-		num_sentences_per_school = torch.tensor([50, 48, 46, 3]).cuda()
-		output = robert(input_ids, num_sentences_per_school)
-		t_loss = loss_fct.compute_loss(output, torch.tensor([10.0, 2.0, 3.0, 1.0]).cuda())
-		t_loss.backward()
+	pass

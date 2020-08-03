@@ -1,7 +1,7 @@
 Welcome!  This repository contains code used for constructing and running the BERT-based models applied to our school reviews analysis.
 
 ## Key directories and files
-- src/models/base/bert_models.py - BERT models
+- src/models/base/bert_models.py - BERT models (MeanBERT and GruBERT)
 - src/models/dataset.py - code for data prep
 - src/models/bert_reviews.py - code for setting model hyper parameters, computing one forward pass, loss
 - src/models/core/train_nn.py - wrapper class that handles training model, early stopping, etc.
